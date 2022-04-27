@@ -1,0 +1,146 @@
+---
+title: "kaggle4"
+output: html_document
+date: '2022-04-12'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library('Rssa')
+library('forecast')
+library(tseries)
+```
+
+```{r}
+rain = read.csv(file = './kaggle_data/climate_test.csv', header = FALSE)
+head(rain)
+```
+
+```{r}
+ts = ts(as.numeric(rain[1, 3:830]), frequency = 12)
+```
+
+```{r}
+spec.pgram(ts, log='no', detrend = FALSE)
+```
+
+
+```{r}
+s = ssa(ts)
+plot(s)
+plot(s, type = "vectors", idx=1:10)
+plot(s, type = "paired", idx = 1:11, plot.contrib = FALSE)
+plot(s, type = "series", groups = as.list(1:6))
+```
+
+```{r}
+fo = fossa(s, nested.groups = comp[[1]])
+plot(fo, type = "vectors", idx=1:10)
+plot(fo, type = "paired", idx = 1:11, plot.contrib = FALSE)
+```
+
+```{r}
+io = iossa(fo, nested.groups = list(5:8))
+plot(io, type = "vectors", idx=1:10)
+plot(io, type = "paired", idx = 1:11, plot.contrib = FALSE)
+```
+
+
+```{r}
+rec = reconstruct(s, groups = comp[[1]])
+```
+
+```{r}
+res = rforecast(s, groups = comp[[1]], len = 36, only.new = FALSE)
+plot(ts, type = "l")
+lines(res, col = "red")
+```
+```{r}
+spec.pgram(rec$F1, log = 'no', detrend = FALSE)
+```
+
+```{r}
+adf.test(rec$F1, alternative = "stationary")
+```
+```{r}
+ggAcf(rec$F1)
+ggPacf(rec$F1)
+```
+
+```{r}
+model.arima = auto.arima(rec$F1, stepwise = TRUE, stationary = FALSE, seasonal = TRUE, 
+                         allowmean = TRUE, ic = "aicc", trace = FALSE, max.order = 24)
+```
+
+```{r}
+arima.forecast = forecast(model.arima, h = 36)
+```
+
+```{r}
+plot(arima.forecast$mean)
+lines(res, col = "red")
+```
+
+
+```{r}
+comp = list()
+# №1
+comp$ts1 = list(1:9)
+# №2
+comp$ts2 = list(1:10) # 4,5,8 ???
+# №3
+comp$ts3 = list(c(1:3, 7,8)) # 3 ??
+# №4
+comp$ts4 = list(1:5)
+# №5
+comp$ts5 = list(1:5)
+# №6
+comp$ts6 = list(1:5)
+# №7
+comp$ts7 = list(1:5) # fossa ??
+# №8
+comp$ts8 = list(c(1:3, 13,14))
+# №9
+comp$ts9 = list(1:5)
+# №10
+comp$ts10 = list(1:3) # fossa -> 1:5 ???
+```
+
+
+
+
+```{r}
+ans = vector()
+for (i in 1:length(comp)){
+  ts = ts(as.numeric(rain[i, 3:830]), frequency = 12)
+  s = ssa(ts)
+  rec = reconstruct(s, groups = comp[[i]])
+  model.arima = auto.arima(rec$F1, stepwise = TRUE, stationary = FALSE, seasonal = TRUE, 
+                         allowmean = TRUE, ic = "aicc", trace = FALSE, max.order = 24)
+  arima.forecast = forecast(model.arima, h = 36)
+  ans = c(ans, arima.forecast$mean)
+}
+
+ans
+```
+
+
+```{r}
+ans = c(arima.forecast$mean,ans)
+```
+
+```{r}
+length(ans)
+```
+
+```{r}
+df_ans = data.frame(ans)
+```
+
+
+```{r}
+write.csv(df_ans, 'ansdf.csv')
+```
+
+```
+
